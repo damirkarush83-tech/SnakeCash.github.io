@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Snake Cash — Казино удачи</title>
+  <style>
+    body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:#02110a; color:#e6fff0; line-height:1.6; font-size:18px; }
+    .app { max-width:1200px; margin:auto; padding:20px; display:flex; gap:20px; flex-wrap:wrap; }
+    main { flex:1; min-width:300px; }
+    aside { width:300px; min-width:260px; }
+    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+    .logo { font-size:32px; font-weight:800; color:#00ff7a; text-shadow:0 0 8px #00ff7a; }
+    .balance { font-weight:bold; color:#ffd166; font-size:20px; }
+    .tabs { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+    .tab { padding:12px 18px; border:2px solid #0f0; border-radius:8px; background:transparent; color:#0f0; cursor:pointer; font-weight:600; font-size:18px; transition:0.2s; }
+    .tab:hover { background:rgba(0,255,122,0.2); }
+    .tab.active { background:#00ff7a; color:#033; font-weight:bold; }
+    section.panel { display:none; }
+    section.panel.active { display:block; animation:fadeIn .3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(5px);} to{opacity:1;transform:none;} }
+    h1,h2,h3,h4 { color:#00ff7a; text-shadow:0 0 10px rgba(0,255,122,0.5); }
+    p { margin:12px 0; }
+    .highlight { color:#ffd166; font-weight:bold; }
+    .btn { padding:12px 18px; border:none; border-radius:8px; cursor:pointer; margin-top:10px; font-size:18px; }
+    .btn.primary { background:#00ff7a; color:#033; font-weight:bold; box-shadow:0 0 12px #00ff7a; }
+    .history, .leaderboard { list-style:none; padding:0; margin-top:12px; max-height:240px; overflow:auto; font-size:16px; }
+    .history li { padding:8px; border-radius:8px; margin-bottom:8px; font-size:16px; }
+    .win { background:rgba(0,255,122,0.1); color:lightgreen; }
+    .lose { background:rgba(255,0,0,0.1); color:#ff9b9b; }
+    .small-muted { font-size:15px; color:#aaa; }
+    .colors { display:flex; gap:14px; justify-content:center; margin-top:14px; }
+    .sw { width:90px; height:90px; border-radius:12px; cursor:pointer; border:3px solid #fff; }
+    .sw.black{background:#111;} .sw.white{background:#fff;} .sw.red{background:#ff6b6b;}
+    .about, .advantages, .game-desc, .news, .faq, .tips { background:rgba(0,255,122,0.05); padding:18px; border-radius:12px; margin-bottom:22px; border:1px solid rgba(0,255,122,0.2); }
+    .game-desc { background:rgba(255,255,255,0.03); border-left:5px solid #00ff7a; }
+    /* Модальное окно */
+    .modal {position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;}
+    .modal-content {background:#022; padding:24px; border-radius:12px; max-width:420px; width:90%; color:#fff;}
+    .modal-content input {width:100%;padding:10px;margin:8px 0;border-radius:8px;border:2px solid #0f0;background:#011;color:#fff;font-size:16px;}
+    .modal-content h3 {margin-top:0;}
+    @media (max-width:768px){
+      .app{flex-direction:column;}
+      aside{width:100%;}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <header>
+      <div class="logo">Snake Cash</div>
+      <div class="balance">Баланс: <span id="balance">0</span>₽</div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="home">Главная</button>
+      <button class="tab" data-tab="profile">Профиль</button>
+      <button class="tab" data-tab="games">Игры</button>
+      <button class="tab" data-tab="achievements">Достижения</button>
+      <button class="tab" data-tab="records">Рекорды</button>
+    </div>
+
+    <section id="home" class="panel active">
+      <div class="about">
+        <h2>О казино Snake Cash</h2>
+        <p>Snake Cash — это стиль, эмоции и азарт победы! 🎰 Наше казино создано <span class="highlight">25.09.2025</span> и за короткое время стало <span class="highlight">лучшим из лучших</span> среди онлайн‑игровых площадок.</p>
+        <p><strong>Бонусы:</strong> каждый новый игрок, зарегистрировавшийся до <span class="highlight">25.10.2025</span>, получает <span class="highlight">100₽</span> на баланс.  
+        Дополнительно: промокод <strong>SNAKE</strong> даёт ещё <span class="highlight">50₽</span>!</p>
+      </div>
+
+      <div class="advantages">
+        <h3>Почему выбирают нас?</h3>
+        <ul>
+          <li>🎯 Честные и прозрачные игры</li>
+          <li>⚡ Мгновенные ставки и быстрые выплаты</li>
+          <li>🏆 Таблица лидеров в реальном времени</li>
+          <li>💎 Уникальная зелёная атмосфера Snake Cash</li>
+          <li>📱 Отличная оптимизация под смартфоны</li>
+        </ul>
+      </div>
+
+      <div class="news">
+        <h3>Новости</h3>
+        <ul>
+          <li>🔥 Новая игра «Супер колесо удачи» уже скоро!</li>
+          <li>🎁 Запущена акция «Пригласи друга» — получи до 500₽</li>
+          <li>💳 Подключены новые методы пополнения и вывода</li>
+        </ul>
+      </div>
+
+      <div class="tips">
+        <h3>Советы новичкам</h3>
+        <p>✔ Начни с маленьких ставок, чтобы привыкнуть к играм.</p>
+        <p>✔ Используй бонусы — они помогут увеличить твой баланс.</p>
+        <p>✔ Играй ответственно: ставь только те суммы, которые готов потерять.</p>
+      </div>
+
+      <div class="faq">
+        <h3>Часто задаваемые вопросы</h3>
+        <p><strong>❓ Как получить бонус?</strong><br> Просто зарегистрируйся до 25.10.2025 и введи промокод «SNAKE».</p>
+        <p><strong>❓ Можно ли играть с телефона?</strong><br> Да, сайт полностью оптимизирован под смартфоны.</p>
+        <p><strong>❓ Как вывести выигрыш?</strong><br> В разделе «Профиль» выбери удобный способ вывода.</p>
+      </div>
+    </section>
+
+    <section id="profile" class="panel">
+      <h3>Профиль</h3>
+      <img id="avatarDisplay" src="" alt="Аватар" style="width:100px;height:100px;border-radius:50%;border:3px solid #0f0;">
+      <input type="file" id="avatarInput" accept="image/*">
+      <p>Имя: <span id="nameDisplay">Гость</span></p>
+      <input id="nameInput" placeholder="Введите имя">
+      <p>Email: <span id="emailDisplay">не указан</span></p>
+      <input id="emailInput" placeholder="Введите email">
+      <p>Промокод: <span id="promoDisplay">—</span></p>
+      <input id="promoInput" placeholder="Введите промокод">
+      <button id="saveProfile" class="btn primary">Сохранить профиль</button>
+    </section>
+
+    <section id="games" class="panel">
+      <h3>Игры</h3>
+      <!-- Игры оставлены как есть -->
+    </section>
+
+    <section id="achievements" class="panel"><h3>Достижения</h3><ul id="achList"></ul></section>
+    <section id="records" class="panel"><h3>Рекорды</h3><div id="leaderboardBox"></div></section>
+  </main>
+
+  <aside><h3>События</h3><ul id="events" class="history"></ul></aside>
+</div>
+
+<!-- Модалка регистрации -->
+<div id="regModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>Регистрация</h3>
+    <input id="regName" placeholder="Введите имя" required>
+    <input id="regEmail" placeholder="Введите email" required>
+    <input type="file" id="regAvatar" accept="image/*" required>
+    <input id="regPromo" placeholder="Введите промокод (необязательно)">
+    <button id="regSubmit" class="btn primary">Зарегистрироваться</button>
+  </div>
+</div>
+
+<script>
+const today = new Date();
+const bonusDate = new Date("2025-10-25T23:59:59");
+
+const S = {
+  name: localStorage.getItem('sc_name') || 'Гость',
+  email: localStorage.getItem('sc_email') || '',
+  avatar: localStorage.getItem('sc_avatar') || '',
+  promo: localStorage.getItem('sc_promo') || '',
+  balance: parseInt(localStorage.getItem('sc_balance') || '0',10),
+};
+
+function save(){
+  localStorage.setItem('sc_name',S.name);
+  localStorage.setItem('sc_email',S.email);
+  localStorage.setItem('sc_avatar',S.avatar);
+  localStorage.setItem('sc_promo',S.promo);
+  localStorage.setItem('sc_balance',S.balance);
+}
+
+function renderProfile(){
+  document.getElementById('balance').textContent=S.balance;
+  document.getElementById('nameDisplay').textContent=S.name;
+  document.getElementById('emailDisplay').textContent=S.email||'не указан';
+  document.getElementById('promoDisplay').textContent=S.promo||'—';
+  if(S.avatar){document.getElementById('avatarDisplay').src=S.avatar;}
+}
+renderProfile();
+
+// Проверка на первую регистрацию
+if(!localStorage.getItem('sc_registered')){
+  document.getElementById('regModal').style.display="flex";
+}
+document.getElementById('regSubmit').onclick=()=>{
+  const name=document.getElementById('regName').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const file=document.getElementById('regAvatar').files[0];
+  if(!name || !email || !file){
+    alert("Пожалуйста, заполните имя, email и загрузите аватар!");
+    return;
+  }
+  S.name=name;
+  S.email=email;
+  const reader=new FileReader();
+  reader.onload=(e)=>{S.avatar=e.target.result;save();renderProfile();}
+  reader.readAsDataURL(file);
+
+  const promo=document.getElementById('regPromo').value.trim().toUpperCase();
+  let bonus=0;
+  if(today<=bonusDate){bonus+=100;}
+  if(promo==="SNAKE"){bonus+=50; S.promo=promo;}
+  S.balance+=bonus;
+  save();renderProfile();
+  localStorage.setItem('sc_registered','1');
+  alert("Регистрация завершена! Бонус: "+bonus+"₽");
+  document.getElementById('regModal').style.display="none";
+};
+
+// Сохранение профиля
+document.getElementById('saveProfile').onclick=()=>{
+  const vName=document.getElementById('nameInput').value.trim();
+  if(vName){S.name=vName;}
+  const vEmail=document.getElementById('emailInput').value.trim();
+  if(vEmail){S.email=vEmail;}
+  const vPromo=document.getElementById('promoInput').value.trim().toUpperCase();
+  if(vPromo && !S.promo){
+    if(vPromo==="SNAKE"){S.balance+=50;alert("Промокод активирован! +50₽");}
+    S.promo=vPromo;
+  }
+  const file=document.getElementById('avatarInput').files[0];
+  if(file){
+    const reader=new FileReader();
+    reader.onload=(e)=>{S.avatar=e.target.result;save();renderProfile();}
+    reader.readAsDataURL(file);
+  }
+  save();renderProfile();
+  alert("Профиль сохранён!");
+};
+</script>
+</body>
+</html>
