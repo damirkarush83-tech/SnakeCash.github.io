@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Snake Cash — Final</title>
+<style>
+:root{--bg:#07120b;--neon:#00ff7a;--gold:#ffd166;--muted:#9aa6a0}
+*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Poppins',sans-serif;background:linear-gradient(180deg,#06140b,#02110a);color:#e6fff0}
+.app{max-width:1100px;margin:0 auto;padding:12px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{width:52px;height:52px;border-radius:10px;background:linear-gradient(135deg,#00ff7a,#1fb97a);display:flex;align-items:center;justify-content:center;font-weight:800;color:#072}
+.title{font-size:18px;font-weight:700;color:var(--neon)}
+.controls{display:flex;gap:8px;align-items:center}
+.btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;color:var(--neon);cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,var(--neon),#7affc2);color:#022;border:none;font-weight:700}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tab{padding:10px 14px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:var(--muted);cursor:pointer}
+.tab.active{background:linear-gradient(90deg, rgba(0,255,122,0.06), rgba(255,209,102,0.03));color:var(--neon);box-shadow:0 10px 30px rgba(0,255,122,0.04)}
+.container{margin-top:16px;display:grid;grid-template-columns:1fr 340px;gap:16px}
+@media(max-width:900px){.container{grid-template-columns:1fr}.right{order:2}}
+.panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+.games-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.games-grid{grid-template-columns:1fr}}
+.card{display:flex;gap:12px;align-items:center;padding:12px;border-radius:10px;background:linear-gradient(90deg, rgba(0,255,122,0.02), transparent);border:1px solid rgba(255,255,255,0.02)}
+.art{width:84px;height:84px;border-radius:8px;background:#072;display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:800;font-size:28px}
+.play{margin-left:auto;padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,var(--neon),#7affc2);color:#022;border:none;cursor:pointer;font-weight:700}
+.small{color:var(--muted);font-size:13px}
+.balance{padding:8px 12px;border-radius:12px;background:rgba(255,255,255,0.02);color:var(--neon);font-weight:800}
+.history{list-style:none;padding-left:0;margin:8px 0 0 0;max-height:180px;overflow:auto}
+.history li{padding:6px;border-radius:6px;margin-bottom:6px;background:rgba(0,0,0,0.12)}
+.win{background:linear-gradient(90deg, rgba(0,255,122,0.06), transparent);color:lightgreen}
+.lose{background:linear-gradient(90deg, rgba(255,0,0,0.03), transparent);color:#ff9b9b}
+.scene{display:none;margin-top:12px}
+.scene.active{display:block}
+.wheel{width:260px;height:260px;border-radius:50%;margin:auto;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,0.6);background:conic-gradient(#ff6b6b 0 60deg,#111 60deg 120deg,#ffd166 120deg 180deg,#111 180deg 240deg,#57c77b 240deg 300deg,#111 300deg 360deg);transition:transform 3s cubic-bezier(.2,.8,.2,1)}
+.center{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;color:var(--gold)}
+.coinBig{font-size:72px;text-align:center}
+.colors{display:flex;gap:12px;justify-content:center;margin-top:12px}
+.sw{width:84px;height:84px;border-radius:12px;cursor:pointer;border:3px solid rgba(255,255,255,0.02)}
+.sw.black{background:#111}
+.sw.white{background:#fff;border:2px solid #ccc}
+.sw.red{background:#ff6b6b}
+.fade{animation:fadeIn .35s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head><body>
+<div class="app">
+  <header class="header">
+    <div style="display:flex;gap:12px;align-items:center"><div class="logo">SC</div><div><div class="title">Snake Cash</div><div class="small">Казино зелёной удачи</div></div></div>
+    <div class="controls"><div id="balance" class="balance">Баланс: $1000</div><button id="recharge" class="btn">Пополнить</button><button id="musicBtn" class="btn">🎵</button></div>
+  </header>
+  <div class="tabs"><button class="tab active" data-tab="home">Главная</button><button class="tab" data-tab="profile">Профиль</button><button class="tab" data-tab="games">Игры</button><button class="tab" data-tab="achievements">Достижения</button><button class="tab" data-tab="records">Рекорды</button></div>
+  <div class="container">
+    <main>
+      <section id="home" class="panel fade"><h2>Добро пожаловать в Snake Cash</h2><p class="small">Нажмите "Начать" или любую игру, чтобы включить музыку и начать.</p><div style="margin-top:12px"><button id="start" class="play btn primary">🚀 Начать</button></div></section>
+      <section id="profile" class="panel" style="display:none"><h3>Профиль</h3><p>Имя: <span id="nameDisplay">Гость</span></p><input id="nameInput" placeholder="Введите имя" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04)"><button id="saveName" class="play">Сохранить</button></section>
+      <section id="games" class="panel" style="display:none"><h3>Игры</h3><div class="games-grid">
+        <div class="card"><div class="art">🎡</div><div><strong>Колесо фортуны</strong><div class="small">Крути колесо и выигрывай</div></div><button class="play" data-game="wheel">Играть</button></div>
+        <div class="card"><div class="art">🪙</div><div><strong>Орел или решка</strong><div class="small">50/50</div></div><button class="play" data-game="coin">Играть</button></div>
+        <div class="card"><div class="art">🎨</div><div><strong>Выбери цвет</strong><div class="small">Чёрный / Белый / Красный</div></div><button class="play" data-game="color">Играть</button></div>
+      </div>
+      <div id="sceneWheel" class="scene"><div class="wheel" id="wheelEl"><div class="center">●</div></div><div style="text-align:center;margin-top:12px"><button id="spin" class="play">Крутить</button> <span id="wheelRes" class="small"></span></div><h4>История</h4><ul id="histWheel" class="history"></ul><div style="text-align:center;margin-top:8px"><button class="tab" data-tab="games" id="backWheel">Назад</button></div></div>
+      <div id="sceneCoin" class="scene"><div style="text-align:center"><div id="coinEl" class="coinBig">🪙</div></div><div style="text-align:center;margin-top:12px"><button id="flip" class="play">Подбросить</button> <span id="coinRes" class="small"></span></div><h4>История</h4><ul id="histCoin" class="history"></ul><div style="text-align:center;margin-top:8px"><button class="tab" data-tab="games" id="backCoin">Назад</button></div></div>
+      <div id="sceneColor" class="scene"><div class="colors"><div id="swB" class="sw black"></div><div id="swW" class="sw white"></div><div id="swR" class="sw red"></div></div><div style="text-align:center;margin-top:12px"><span id="colorRes" class="small"></span></div><h4>История</h4><ul id="histColor" class="history"></ul><div style="text-align:center;margin-top:8px"><button class="tab" data-tab="games" id="backColor">Назад</button></div></div>
+      </section>
+      <section id="achievements" class="panel" style="display:none"><h3>Достижения</h3><ul id="achList" class="small"></ul></section>
+      <section id="records" class="panel" style="display:none"><h3>Рекорды</h3><div id="recordsBox" class="small"></div></section>
+    </main>
+    <aside class="right panel" style="display:flex;flex-direction:column;gap:12px"><div><strong>События</strong><ul id="events" class="history"></ul></div><div><strong>Топ</strong><div id="top" class="small"></div></div></aside>
+  </div>
+  <div class="footer panel" style="margin-top:12px;text-align:center">Подсказка: нажмите «Начать» для запуска музыки.</div>
+</div>
+<script>
+const S={name:localStorage.getItem('sc_name')||'Гость',balance:parseInt(localStorage.getItem('sc_balance')||'1000',10),events:JSON.parse(localStorage.getItem('sc_events')||'[]'),histW:JSON.parse(localStorage.getItem('sc_hist_w')||'[]'),histC:JSON.parse(localStorage.getItem('sc_hist_c')||'[]'),histCol:JSON.parse(localStorage.getItem('sc_hist_col')||'[]'),records:JSON.parse(localStorage.getItem('sc_recs')||'[]'),musicOn:true};
+function save(){ localStorage.setItem('sc_name',S.name); localStorage.setItem('sc_balance',S.balance); localStorage.setItem('sc_events',JSON.stringify(S.events)); localStorage.setItem('sc_hist_w',JSON.stringify(S.histW)); localStorage.setItem('sc_hist_c',JSON.stringify(S.histC)); localStorage.setItem('sc_hist_col',JSON.stringify(S.histCol)); localStorage.setItem('sc_recs',JSON.stringify(S.records)); }
+document.getElementById('nameDisplay').textContent=S.name; document.getElementById('balance').textContent='Баланс: $'+S.balance; document.getElementById('nameInput').value=S.name; renderAll();
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); const id=t.dataset.tab; document.querySelectorAll('section.panel').forEach(s=>s.style.display='none'); document.getElementById(id).style.display='block'; hideScenes(); }));
+function hideScenes(){ document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active')); }
+document.getElementById('start').addEventListener('click', ()=>{ try{ startMusicRandom(); }catch(e){} document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); document.querySelector('[data-tab="games"]').classList.add('active'); document.getElementById('games').style.display='block'; });
+document.getElementById('recharge').addEventListener('click',(e)=>{ S.balance+=500; document.getElementById('balance').textContent='Баланс: $'+S.balance; save(); for(let i=0;i<6;i++){ const c=document.createElement('div'); c.textContent='🪙'; c.style.position='fixed'; c.style.left=(e.clientX + (Math.random()*80-40))+'px'; c.style.top=(e.clientY + (Math.random()*40-20))+'px'; c.style.fontSize='20px'; document.body.appendChild(c); c.animate([{transform:'translateY(0) scale(1)',opacity:1},{transform:'translateY(-120px) scale(0.6)',opacity:0}],{duration:900,easing:'cubic-bezier(.2,.8,.2,1)'}); setTimeout(()=>c.remove(),900);} });
+document.getElementById('saveName').addEventListener('click', ()=>{ const v=document.getElementById('nameInput').value.trim(); if(v){ S.name=v; document.getElementById('nameDisplay').textContent=v; save(); alert('Имя сохранено'); renderAll(); } });
+document.querySelectorAll('[data-game]').forEach(b=>b.addEventListener('click', ()=>{ const g=b.dataset.game; hideScenes(); document.getElementById('scene'+g.charAt(0).toUpperCase()+g.slice(1)).classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }));
+function renderAll(){ renderEvents(); renderHistories(); renderRecords(); renderAchievements(); }
+function renderEvents(){ const el=document.getElementById('events'); el.innerHTML=''; S.events.forEach(x=>{ const li=document.createElement('li'); li.textContent=x; li.className = x.includes('выиграл')?'win':'lose'; el.appendChild(li); }); }
+function renderHistories(){ const hw=document.getElementById('histWheel'); hw.innerHTML=''; S.histW.slice(0,5).forEach(x=>{ const li=document.createElement('li'); li.textContent=x; li.className = x.includes('выиграл')?'win':'lose'; hw.appendChild(li); }); const hc=document.getElementById('histCoin'); hc.innerHTML=''; S.histC.slice(0,5).forEach(x=>{ const li=document.createElement('li'); li.textContent=x; li.className = x.includes('выиграл')?'win':'lose'; hc.appendChild(li); }); const hcol=document.getElementById('histColor'); hcol.innerHTML=''; S.histCol.slice(0,5).forEach(x=>{ const li=document.createElement('li'); li.textContent=x; li.className = x.includes('выиграл')?'win':'lose'; hcol.appendChild(li); }); }
+function renderRecords(){ const el=document.getElementById('recordsBox'); const rec=S.records.slice().sort((a,b)=>b.balance-a.balance).slice(0,5); el.innerHTML = rec.length? rec.map((r,i)=>`#${i+1} ${r.name} — $${r.balance}`).join('<br>') : 'Пока нет рекордов'; }
+function renderAchievements(){ const list=document.getElementById('achList'); list.innerHTML=''; const items=['Сыграй 1 раз','Накопи 500','Выиграй 10 подряд']; items.forEach(i=>{ const li=document.createElement('li'); li.textContent=i; list.appendChild(li); }); }
+let audioCtx=null; function ensure(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
+let musicNodes=[];
+function playLoop(freqs){ ensure(); const g=audioCtx.createGain(); g.gain.value=0.06; g.connect(audioCtx.destination); const oscillators = freqs.map((f)=>{ const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=f; o.connect(g); o.start(); return o; }); musicNodes.push({g,oscillators}); }
+function stopLoops(){ musicNodes.forEach(n=>{ n.oscillators.forEach(o=>{ try{o.stop();}catch(e){} }); try{n.g.disconnect()}catch(e){} }); musicNodes=[]; }
+function startMusicRandom(){ stopLoops(); const sets=[[110,220,330],[130,260,390],[90,180,270]]; const pick=sets[Math.floor(Math.random()*sets.length)]; playLoop(pick); document.getElementById('musicBtn').textContent='🔊'; S.musicOn=true; }
+document.getElementById('musicBtn').addEventListener('click', ()=>{ if(S.musicOn){ stopLoops(); S.musicOn=false; document.getElementById('musicBtn').textContent='🎵'; } else { startMusicRandom(); } save(); });
+const wheel=document.getElementById('wheelEl'); let spinning=false;
+document.getElementById('spin').addEventListener('click', ()=>{ if(spinning) return; spinning=true; const sectors=['win','lose','win','lose','win','lose']; const idx=Math.floor(Math.random()*6); const angle=360*3 + idx*(360/6) + (360/12); wheel.style.transform='rotate('+angle+'deg)'; document.getElementById('wheelRes').textContent='Крутим...'; setTimeout(()=>{ const res=sectors[idx]; const win=res==='win'; const reward=win?20:-20; S.balance+=reward; document.getElementById('balance').textContent='Баланс: $'+S.balance; S.histW.unshift(`${new Date().toLocaleTimeString()} — ${win?'выиграл':'проиграл'} ${Math.abs(reward)}`); if(S.histW.length>10) S.histW.pop(); S.events.unshift(`${S.name} ${win?'выиграл':'проиграл'} ${Math.abs(reward)} на колесе`); if(S.events.length>10) S.events.pop(); save(); renderHistories(); renderEvents(); document.getElementById('wheelRes').textContent= win?('Вы выиграли '+reward):('Проигрыш '+Math.abs(reward)); try{ ensure(); const g=audioCtx.createGain(); g.connect(audioCtx.destination); const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value= win?880:220; o.connect(g); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.12,audioCtx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.45); o.start(); o.stop(audioCtx.currentTime+0.5); }catch(e){}; updateRecords(); spinning=false; },3100); });
+let flipping=false; document.getElementById('flip').addEventListener('click', ()=>{ if(flipping) return; flipping=true; const el=document.getElementById('coinEl'); el.style.transform='rotateY(720deg)'; el.style.transition='transform 1.4s'; setTimeout(()=>{ el.style.transform='none'; const win=Math.random()>0.5; const reward=win?10:-10; S.balance+=reward; document.getElementById('balance').textContent='Баланс: $'+S.balance; S.histC.unshift(`${new Date().toLocaleTimeString()} — ${win?'Орел':'Решка'} ${win?'выиграл':'проиграл'} ${Math.abs(reward)}`); if(S.histC.length>10) S.histC.pop(); S.events.unshift(`${S.name} ${win?'выиграл':'проиграл'} ${Math.abs(reward)} на монете`); if(S.events.length>10) S.events.pop(); save(); renderHistories(); renderEvents(); document.getElementById('coinRes').textContent = win?('Орел +'+reward):('Решка -'+Math.abs(reward)); try{ ensure(); const g=audioCtx.createGain(); g.connect(audioCtx.destination); const o=audioCtx.createOscillator(); o.type='square'; o.frequency.value= win?660:160; o.connect(g); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.1,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.4); o.start(); o.stop(audioCtx.currentTime+0.45); }catch(e){}; updateRecords(); flipping=false; },1400); });
+function chooseColor(choice){ let steps=0; const colors=['black','white','red']; const iv=setInterval(()=>{ steps++; if(steps>6){ clearInterval(iv); const res=colors[Math.floor(Math.random()*3)]; const win=res===choice; const reward=win?15:-15; S.balance+=reward; document.getElementById('balance').textContent='Баланс: $'+S.balance; S.histCol.unshift(`${new Date().toLocaleTimeString()} — ${res} ${win?'выиграл':'проиграл'} ${Math.abs(reward)}`); if(S.histCol.length>10) S.histCol.pop(); S.events.unshift(`${S.name} ${win?'выиграл':'проиграл'} ${Math.abs(reward)} в угадай цвет`); if(S.events.length>10) S.events.pop(); save(); renderHistories(); renderEvents(); document.getElementById('colorRes').textContent = win?('Угадал +'+reward):('Не угадал -'+Math.abs(reward)); try{ ensure(); const g=audioCtx.createGain(); g.connect(audioCtx.destination); const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value= win?880:180; o.connect(g); g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.12,audioCtx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.45); o.start(); o.stop(audioCtx.currentTime+0.5); }catch(e){}; updateRecords(); } else { const sw=document.querySelectorAll('.sw'); sw[Math.floor(Math.random()*3)].style.boxShadow='0 0 18px rgba(255,255,255,0.06)'; setTimeout(()=>{ sw.forEach(s=>s.style.boxShadow='none'); },120); } },140); }
+document.getElementById('swB').addEventListener('click', ()=>chooseColor('black')); document.getElementById('swW').addEventListener('click', ()=>chooseColor('white')); document.getElementById('swR').addEventListener('click', ()=>chooseColor('red'));
+function updateRecords(){ const ex=S.records.find(r=>r.name===S.name); if(ex){ ex.balance=Math.max(ex.balance,S.balance); } else { S.records.push({name:S.name,balance:S.balance}); } save(); renderRecords(); renderAchievements(); }
+document.getElementById('backWheel').addEventListener('click', hideScenes); document.getElementById('backCoin').addEventListener('click', hideScenes); document.getElementById('backColor').addEventListener('click', hideScenes);
+document.addEventListener('click', function one(){ try{ if(!audioCtx) ensure(); }catch(e){} document.removeEventListener('click', one); });
+window._SC={S,save};
+</script>
+<!-- BEGIN: iOS-friendly tabs + JSONBin leaderboard integration -->
+<script>
+(function(){
+  // Ensure DOM is ready
+  function showTab(id){
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    const btn = document.querySelector('.tab[data-tab="'+id+'"]');
+    if(btn) btn.classList.add('active');
+    document.querySelectorAll('section.panel').forEach(s=>s.style.display='none');
+    const el = document.getElementById(id);
+    if(el) el.style.display='block';
+  }
+
+  // bind tabs with pointerdown/touchstart/click fallback
+  document.querySelectorAll('.tab').forEach(function(t){
+    var handler = function(e){
+      // don't prevent default to keep native behavior
+      var id = t.dataset.tab;
+      showTab(id);
+    };
+    if(window.PointerEvent){
+      t.addEventListener('pointerdown', handler);
+    } else {
+      t.addEventListener('touchstart', handler, {passive:true});
+      t.addEventListener('click', handler);
+    }
+  });
+
+  // show initial active tab on load
+  (function(){
+    var active = document.querySelector('.tab.active');
+    if(active) showTab(active.dataset.tab);
+    else showTab('home');
+  })();
+
+  // Add Publish button to records section (if not present)
+  var recordsSection = document.getElementById('records');
+  if(recordsSection){
+    if(!document.getElementById('publishScore')){
+      var wrapper = document.createElement('div');
+      wrapper.style.display = 'flex';
+      wrapper.style.gap = '8px';
+      wrapper.style.alignItems = 'center';
+      wrapper.style.marginBottom = '8px';
+      var btn = document.createElement('button');
+      btn.id = 'publishScore';
+      btn.className = 'btn';
+      btn.textContent = 'Опубликовать мой рекорд';
+      wrapper.appendChild(btn);
+      // insert at top of records section before existing content
+      recordsSection.insertBefore(wrapper, recordsSection.firstChild);
+    }
+  }
+
+  // JSONBin integration
+  const BIN_ID = "BIN_ID_HERE";
+  const SECRET = "$2a$10$OYNGrGnvRyn.pc7y/hU8deWOlDQz0kvb6aEfQOTXXUVytu0hPGkKa";
+  const BASE_URL = "https://api.jsonbin.io/v3/b/" + BIN_ID;
+
+  // ensure S exists
+  window.S = window.S || {};
+  S.leaderboard = S.leaderboard || [];
+
+  async function loadLeaderboard(){
+    if(!BIN_ID || BIN_ID==='BIN_ID_HERE'){
+      // show hint in records box
+      var box = document.getElementById('recordsBox');
+      if(box) box.innerHTML = '<div class="small-muted">Bin ID не задан. Замените BIN_ID_HERE в коде на ваш Bin ID.</div>';
+      return;
+    }
+    try {
+      const res = await fetch(`${BASE_URL}/latest`, { headers: { "X-Master-Key": SECRET }});
+      if(!res.ok){ console.error('JSONBin load failed', res.status); return; }
+      const data = await res.json();
+      S.leaderboard = data.record || [];
+      renderLeaderboard();
+    } catch(e){ console.error('Ошибка загрузки leaderboard', e); }
+  }
+
+  async function saveLeaderboard(){
+    if(!BIN_ID || BIN_ID==='BIN_ID_HERE') return;
+    try {
+      await fetch(BASE_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Key': SECRET },
+        body: JSON.stringify(S.leaderboard)
+      });
+    } catch(e){ console.error('Ошибка сохранения leaderboard', e); }
+  }
+
+  function renderLeaderboard(){
+    var box = document.getElementById('leaderboardBox') || document.getElementById('recordsBox');
+    if(!box) return;
+    var lb = (S.leaderboard || []).slice().sort(function(a,b){ return b.balance - a.balance; }).slice(0,20);
+    if(!lb || !lb.length){
+      box.innerHTML = '<div class="small-muted">Пока нет опубликованных рекордов</div>';
+      return;
+    }
+    var html = '<ol>' + lb.map(function(i){ return '<li>'+ (i.name || 'Гость') + ' — $' + i.balance + ' <span class="small-muted">(' + (i.date||'') + ')</span></li>'; }).join('') + '</ol>';
+    box.innerHTML = html;
+  }
+
+  // publish button handler
+  document.addEventListener('click', async function(e){
+    if(e.target && e.target.id === 'publishScore'){
+      var entry = { name: S.name || 'Гость', balance: S.balance || 0, date: new Date().toLocaleString() };
+      var ex = (S.leaderboard || []).find(function(x){ return x.name === entry.name; });
+      if(ex){ if(entry.balance > ex.balance){ ex.balance = entry.balance; ex.date = entry.date; } }
+      else { S.leaderboard.push(entry); }
+      await saveLeaderboard();
+      renderLeaderboard();
+      alert('Рекорд опубликован!');
+    }
+  });
+
+  // auto-refresh leaderboard
+  loadLeaderboard();
+  setInterval(loadLeaderboard, 10000);
+
+})();
+</script>
+<!-- END -->
+</body></html>
