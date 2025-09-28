@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Snake Cash — Казино удачи</title>
+  <style>
+    :root{
+      --bg:#02110a;
+      --accent:#00ff7a;
+      --muted:#9fbfb0;
+      --card:#022;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(0,255,122,0.02), transparent 25%),
+        radial-gradient(circle at 80% 70%, rgba(0,200,100,0.02), transparent 25%),
+        linear-gradient(180deg,#02110a 0%, #041b12 100%);
+      color:#e6fff0;
+      -webkit-font-smoothing:antialiased;
+    }
+    /* subtle snake-scale overlay */
+    body::after{
+      content:"";
+      position:fixed;inset:0;
+      background-image:repeating-linear-gradient(45deg, rgba(0,60,30,0.06) 0 2px, transparent 2px 6px);
+      opacity:0.22;pointer-events:none;mix-blend-mode:overlay;
+    }
+
+    .app{max-width:1100px;margin:12px auto;padding:16px;display:flex;gap:20px;flex-wrap:wrap;position:relative;z-index:1}
+    main{flex:1;min-width:280px}
+    aside{width:300px;min-width:220px}
+
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+    .logo{font-size:28px;font-weight:800;color:var(--accent);text-shadow:0 0 8px rgba(0,255,122,0.18)}
+    .balance{font-weight:700;color:#ffd166;font-size:18px}
+
+    .tabs{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .tab{padding:10px 14px;border-radius:8px;border:2px solid rgba(0,255,122,0.12);background:transparent;color:var(--accent);cursor:pointer;font-weight:700}
+    .tab.active{background:var(--accent);color:#012}
+
+    section.panel{display:none}
+    section.panel.active{display:block;animation:fadeIn .28s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+    .card{background:rgba(255,255,255,0.03);padding:14px;border-radius:10px;border:1px solid rgba(0,255,122,0.12);margin-bottom:12px;transition:all .25s}
+    .card:hover{box-shadow:0 6px 20px rgba(0,255,122,0.06);transform:translateY(-2px);}
+
+    .btn{padding:10px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700;background:rgba(255,255,255,0.03);color:var(--accent)}
+    .btn.primary{background:var(--accent);color:#012;box-shadow:0 8px 24px rgba(0,255,122,0.08)}
+
+    .small{font-size:13px;color:var(--muted)}
+    .games-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:760px){.app{flex-direction:column}.tabs{justify-content:center}.games-grid{grid-template-columns:1fr}}
+
+    /* Coin */
+    .coin{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#222;background:linear-gradient(180deg,#ffd,#fff);margin:10px auto;transition:transform .9s cubic-bezier(.2,.9,.2,1)}
+    .coin.spin{transform:rotateY(720deg)}
+
+    /* Slot machine */
+    .slot-machine{display:flex;align-items:center;gap:12px}
+    .reel{width:72px;height:72px;border-radius:8px;background:#011;border:2px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}
+    .reel.spin{animation:reelSpin .8s linear}
+    @keyframes reelSpin{0%{transform:translateY(0)}50%{transform:translateY(-10px)}100%{transform:translateY(0)}}
+
+    /* Roulette - wheel and pointer */
+    .roulette-wrap{display:flex;align-items:center;gap:12px}
+    .roulette-wheel{width:160px;height:160px;border-radius:50%;border:6px solid rgba(255,255,255,0.06);overflow:hidden;transition:transform 3s cubic-bezier(.2,.8,.2,1)}
+    .roulette-pointer{width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:20px solid #ffefef; margin:0 auto; filter:drop-shadow(0 4px 6px rgba(0,0,0,.6))}
+
+    /* Wheel canvas pointer */
+    .pointer{width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:30px solid #ffefef;margin:6px auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6))}
+
+    /* cards animation */
+    .cards{display:flex;gap:8px}
+    .card-anim{background:#0b2b1f;padding:8px;border-radius:6px;min-width:72px;text-align:center;transform:translateY(-12px);opacity:0;transition:all .5s cubic-bezier(.2,.9,.2,1)}
+    .card-anim.show{transform:translateY(0);opacity:1}
+
+    /* small UI */
+    .muted{color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+<div class="app" role="application">
+  <main>
+    <header>
+      <div class="logo">Snake Cash</div>
+      <div class="balance">Баланс: <span id="balance">0</span>₽</div>
+    </header>
+
+    <nav class="tabs" aria-label="Навигация">
+      <button class="tab active" data-tab="home">Главная</button>
+      <button class="tab" data-tab="profile">Профиль</button>
+      <button class="tab" data-tab="games">Игры</button>
+      <button class="tab" data-tab="achievements">Достижения</button>
+      <button class="tab" data-tab="records">Рекорды</button>
+    </nav>
+
+    <section id="home" class="panel active" aria-live="polite">
+      <div class="card">
+        <h2>Добро пожаловать в Snake Cash</h2>
+        <p class="small">Казино оптимизировано под смартфоны. Используйте бонусы и играйте ответственно.</p>
+      </div>
+
+      <div class="card">
+        <h3>Новости и акции</h3>
+        <ul class="small">
+          <li>🔥 Новая функция: Колесо фортуны с призами.</li>
+          <li>🎁 Пригласи друга и получи до 500₽.</li>
+          <li>💎 Промокод <b>SNAKE</b> даёт +50₽.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Советы новичкам</h3>
+        <p class="small">Начните с небольших ставок, используйте бонусы и следите за балансом.</p>
+      </div>
+
+      <div class="card">
+        <h3>FAQ</h3>
+        <ul class="small">
+          <li><b>Как получить бонус?</b> Зарегистрируйтесь до 25.10.2025 и введите промокод <b>SNAKE</b>.</li>
+          <li><b>Как активировать промокод?</b> Введите его при регистрации или в профиле.</li>
+          <li><b>Можно ли играть бесплатно?</b> Да — есть бесплатные возможности (промо, бесплатный слот и т.д.).</li>
+          <li><b>Можно ли играть с телефона?</b> Да — интерфейс адаптирован под мобильные устройства.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="profile" class="panel" aria-live="polite">
+      <div class="card">
+        <h3>Профиль</h3>
+        <p>Аватар</p>
+        <div style="display:flex;gap:12px;align-items:center">
+          <img id="avatarPreview" src="" alt="Аватар" style="width:72px;height:72px;border-radius:10px;background:#022;object-fit:cover;display:none;border:2px solid rgba(255,255,255,0.03)"/>
+          <input type="file" id="avatarInput" accept="image/*">
+        </div>
+        <div style="margin-top:10px">
+          <input id="nameInput" placeholder="Имя" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04)"/>
+          <input id="emailInput" placeholder="Email" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);margin-top:8px"/>
+          <input id="promoInput" placeholder="Промокод" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);margin-top:8px"/>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button id="saveProfile" class="btn primary">Сохранить профиль</button>
+            <button id="logoutBtn" class="btn">Сбросить данные</button>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:8px">Имя, email и аватар сохраняются локально в браузере.</p>
+      </div>
+    </section>
+
+    <section id="games" class="panel" aria-live="polite">
+      <h2>Игры</h2>
+      <div class="games-grid">
+
+        <!-- Coin -->
+        <div class="card">
+          <h4>Орел или решка 🪙</h4>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div>
+              <button class="btn" id="coinO">Орел</button>
+              <button class="btn" id="coinR">Решка</button>
+            </div>
+            <div class="coin" id="coinEl">₽</div>
+          </div>
+          <div style="margin-top:8px"><button id="flipBtn" class="btn primary">Подбросить</button></div>
+          <div id="coinRes" class="small muted" style="margin-top:8px"></div>
+        </div>
+
+        <!-- Color -->
+        <div class="card">
+          <h4>Угадай цвет 🎨</h4>
+          <div style="display:flex;gap:8px">
+            <button class="btn" data-color="чёрный">Чёрный</button>
+            <button class="btn" data-color="белый">Белый</button>
+            <button class="btn" data-color="красный">Красный</button>
+          </div>
+          <div id="colorRes" class="small muted" style="margin-top:8px"></div>
+        </div>
+
+        <!-- RPS -->
+        <div class="card">
+          <h4>Камень‑ножницы‑бумага ✊✋✌️</h4>
+          <div style="display:flex;gap:8px">
+            <button class="btn rps" data-move="камень">✊</button>
+            <button class="btn rps" data-move="ножницы">✌️</button>
+            <button class="btn rps" data-move="бумага">✋</button>
+          </div>
+          <div id="rpsRes" class="small muted" style="margin-top:8px"></div>
+        </div>
+
+        <!-- Slots machine -->
+        <div class="card">
+          <h4>Слот-машина 🎰</h4>
+          <div class="slot-machine" style="margin-top:8px">
+            <div class="reel" id="reel1">🍒</div>
+            <div class="reel" id="reel2">🍋</div>
+            <div class="reel" id="reel3">🔔</div>
+            <div style="margin-left:8px">
+              <button id="spinSlots" class="btn primary">Крутить</button>
+              <div id="slotRes" class="small muted" style="margin-top:6px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Roulette -->
+        <div class="card">
+          <h4>Рулетка 🔴⚫</h4>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div class="roulette-pointer" id="roulettePointer"></div>
+            <canvas id="rouletteCanvas" width="200" height="200" style="border-radius:50%"></canvas>
+            <div><button id="spinRoulette" class="btn primary">Крутить рулетку</button></div>
+            <div id="rouletteRes" class="small muted" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+        <!-- Blackjack -->
+        <div class="card">
+          <h4>Блэкджек 🂡</h4>
+          <div class="cards" style="margin-top:8px">
+            <div class="card-anim" id="bjPlayer">Игрок: —</div>
+            <div class="card-anim" id="bjDealer">Дилер: —</div>
+          </div>
+          <div style="margin-top:8px"><button id="playBJ" class="btn primary">Играть</button></div>
+          <div id="bjRes" class="small muted" style="margin-top:6px"></div>
+        </div>
+
+        <!-- Wheel of fortune -->
+        <div class="card">
+          <h4>Колесо фортуны 🎡</h4>
+          <div class="pointer"></div>
+          <canvas id="wheelCanvas" width="300" height="300"></canvas>
+          <div style="margin-top:8px">
+            <button id="spinWheel" class="btn primary">Крутить колесо</button>
+            <div id="wheelRes" class="small muted" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="achievements" class="panel">
+      <div class="card"><h3>Достижения</h3><p class="small">Первый выигрыш, 1000₽ и т.д. — будут здесь.</p></div>
+    </section>
+
+    <section id="records" class="panel">
+      <div class="card"><h3>Рекорды</h3><div id="leaderboardBox" class="small muted">Пока нет рекордов</div></div>
+    </section>
+
+  </main>
+
+  <aside>
+    <div class="card"><h4>События</h4><ul id="events" class="small muted" style="padding-left:16px;margin:6px 0"></ul></div>
+    <div class="card"><h4>Информация</h4><p class="small">Бонусы: 100₽ при регистрации до 25.10.2025, промокод SNAKE +50₽.</p></div>
+  </aside>
+</div>
+
+<script>
+/* Helpers and state */
+const state = {
+  balance: parseInt(localStorage.getItem('sc_balance')||'0',10),
+  freeSlot: localStorage.getItem('sc_freeSlot')==='1',
+  name: localStorage.getItem('sc_name')||'Гость',
+  email: localStorage.getItem('sc_email')||'',
+  avatar: localStorage.getItem('sc_avatar')||'',
+  promo: localStorage.getItem('sc_promo')||'',
+};
+function saveState(){
+  localStorage.setItem('sc_balance', String(state.balance));
+  localStorage.setItem('sc_freeSlot', state.freeSlot ? '1' : '0');
+  localStorage.setItem('sc_name', state.name);
+  localStorage.setItem('sc_email', state.email);
+  localStorage.setItem('sc_avatar', state.avatar);
+  localStorage.setItem('sc_promo', state.promo);
+}
+function pushEvent(txt){
+  const ul = document.getElementById('events');
+  const li = document.createElement('li');
+  li.textContent = new Date().toLocaleString() + ' — ' + txt;
+  ul.prepend(li);
+}
+function renderProfile(){
+  document.getElementById('balance').textContent = state.balance;
+  document.getElementById('nameInput').value = state.name;
+  document.getElementById('emailInput').value = state.email;
+  document.getElementById('promoInput').value = state.promo;
+  const img = document.getElementById('avatarPreview');
+  if(state.avatar){ img.src = state.avatar; img.style.display = 'block'; } else { img.style.display = 'none'; }
+}
+renderProfile();
+
+/* Tabs */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.tab).classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+
+/* Profile: avatar input and save */
+document.getElementById('avatarInput').addEventListener('change', (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    state.avatar = r.result;
+    saveState();
+    renderProfile();
+    pushEvent('Аватар обновлён');
+  };
+  r.readAsDataURL(f);
+});
+document.getElementById('saveProfile').addEventListener('click', ()=>{
+  const n = document.getElementById('nameInput').value.trim();
+  const em = document.getElementById('emailInput').value.trim();
+  const p = document.getElementById('promoInput').value.trim().toUpperCase();
+  if(n) state.name = n;
+  if(em) state.email = em;
+  if(p && !state.promo){
+    if(p === 'SNAKE'){ state.balance += 50; alert('Промокод активирован: +50₽'); }
+    state.promo = p;
+  }
+  saveState();
+  renderProfile();
+  pushEvent('Профиль сохранён');
+  alert('Профиль сохранён');
+});
+
+/* Reset */
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  if(!confirm('Сбросить все локальные данные?')) return;
+  localStorage.clear();
+  location.reload();
+});
+
+/* Simple games: Coin, Color, RPS */
+let coinChoice = null;
+document.getElementById('coinO').addEventListener('click', ()=>{ coinChoice='Орел'; document.getElementById('coinRes').textContent='Вы выбрали Орел'; });
+document.getElementById('coinR').addEventListener('click', ()=>{ coinChoice='Решка'; document.getElementById('coinRes').textContent='Вы выбрали Решка'; });
+document.getElementById('flipBtn').addEventListener('click', ()=>{
+  if(!coinChoice){ alert('Сначала выберите Орел или Решка'); return; }
+  const el = document.getElementById('coinEl'); el.classList.remove('spin'); void el.offsetWidth; el.classList.add('spin');
+  setTimeout(()=> el.classList.remove('spin'),900);
+  const res = Math.random() < 0.5 ? 'Орел' : 'Решка';
+  const reward = res === coinChoice ? 10 : -10;
+  state.balance += reward; saveState(); renderProfile();
+  document.getElementById('coinRes').textContent = `Выпало ${res} — ${reward>0?'+':''}${reward}₽`;
+  pushEvent(`Монета: ${res} (${reward>0?'+':''}${reward}₽)`);
+});
+
+document.querySelectorAll('[data-color]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const chosen = b.getAttribute('data-color');
+    const colors = ['чёрный','белый','красный'];
+    const result = colors[Math.floor(Math.random()*3)];
+    const reward = result === chosen ? 15 : -15;
+    state.balance += reward; saveState(); renderProfile();
+    document.getElementById('colorRes').textContent = `Выпал ${result} — ${reward>0?'+':''}${reward}₽`;
+    pushEvent(`Угадай цвет: ${result} (${reward>0?'+':''}${reward}₽)`);
+  });
+});
+
+/* RPS */
+document.querySelectorAll('.rps').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const user = b.dataset.move;
+    const moves = ['камень','ножницы','бумага'];
+    const bot = moves[Math.floor(Math.random()*3)];
+    let reward = 0;
+    if((user==='камень'&&bot==='ножницы')||(user==='ножницы'&&bot==='бумага')||(user==='бумага'&&bot==='камень')) reward = 10;
+    else if(user !== bot) reward = -10;
+    state.balance += reward; saveState(); renderProfile();
+    document.getElementById('rpsRes').textContent = `Вы: ${user} — Бот: ${bot} — ${reward>0?'+':''}${reward}₽`;
+    pushEvent(`RPS: ${user} vs ${bot} (${reward>0?'+':''}${reward}₽)`);
+  });
+});
+
+/* Slot machine - 3 reels with animation */
+const symbols = ["🍒","🍋","🍇","🔔","7️⃣","⭐"];
+const reelEls = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
+document.getElementById('spinSlots').addEventListener('click', async ()=>{
+  // spin each reel with delay
+  const results = [];
+  for(let i=0;i<3;i++){
+    spinReelVisual(reelEls[i]);
+    const res = await spinReel(i);
+    results.push(res);
+  }
+  // evaluate
+  let reward = 0;
+  if(results[0]===results[1] && results[1]===results[2]) reward = 100;
+  else if(results[0]===results[1] || results[1]===results[2] || results[0]===results[2]) reward = 20;
+  state.balance += reward; saveState(); renderProfile();
+  document.getElementById('slotRes').textContent = `${results.join(' ')} → ${reward?('+'+reward+'₽'):'0₽'}`;
+  pushEvent(`Слоты: ${results.join(' ')} (${reward?'+'+reward+'₽':'0₽'})`);
+});
+
+function spinReelVisual(el){
+  el.classList.add('spin');
+  setTimeout(()=> el.classList.remove('spin'), 900);
+}
+function spinReel(i){
+  return new Promise(resolve=>{
+    // simulate animation time varying per reel
+    const time = 700 + i*400 + Math.random()*300;
+    const interval = setInterval(()=>{
+      const sym = symbols[Math.floor(Math.random()*symbols.length)];
+      reelEls[i].textContent = sym;
+    }, 80);
+    setTimeout(()=>{
+      clearInterval(interval);
+      const final = symbols[Math.floor(Math.random()*symbols.length)];
+      reelEls[i].textContent = final;
+      resolve(final);
+    }, time);
+  });
+}
+
+/* Roulette - canvas wheel with pointer */
+const rouletteCanvas = document.getElementById('rouletteCanvas');
+const rctx = rouletteCanvas.getContext('2d');
+const rouletteSize = rouletteCanvas.width;
+const rcenter = rouletteSize/2;
+const pockets = 37; // 0..36
+function drawRoulette(){
+  const arc = 2*Math.PI/pockets;
+  rctx.clearRect(0,0,rouletteSize,rouletteSize);
+  rctx.save(); rctx.translate(rcenter,rcenter);
+  for(let i=0;i<pockets;i++){
+    const start = i*arc;
+    rctx.beginPath();
+    rctx.fillStyle = i===0 ? '#0a4' : (i%2 ? '#e63946' : '#111');
+    rctx.moveTo(0,0);
+    rctx.arc(0,0,rcenter,start,start+arc);
+    rctx.fill();
+    // number not drawn for simplicity
+  }
+  rctx.restore();
+}
+drawRoulette();
+document.getElementById('spinRoulette').addEventListener('click', ()=>{
+  const wheelEl = rouletteCanvas;
+  wheelEl.style.transition = 'transform 3s cubic-bezier(.2,.8,.2,1)';
+  const turns = 4 + Math.random()*4;
+  const angle = turns*360 + Math.floor(Math.random()*360);
+  wheelEl.style.transform = `rotate(${angle}deg)`;
+  setTimeout(()=>{
+    wheelEl.style.transition = '';
+    wheelEl.style.transform = '';
+    const pocket = Math.floor(Math.random()*37);
+    const color = pocket===0? 'зелёное' : (pocket%2? 'красное':'чёрное');
+    const reward = pocket===0?100:10;
+    state.balance += reward; saveState(); renderProfile();
+    document.getElementById('rouletteRes').textContent = `Выпало ${pocket} (${color}) → +${reward}₽`;
+    pushEvent(`Рулетка: ${pocket} ${color} +${reward}₽`);
+  },3200);
+});
+
+/* Blackjack - animated simple draw */
+document.getElementById('playBJ').addEventListener('click', ()=>{
+  const pEl = document.getElementById('bjPlayer'), dEl = document.getElementById('bjDealer'), resEl = document.getElementById('bjRes');
+  pEl.classList.remove('show'); dEl.classList.remove('show'); resEl.textContent = '';
+  setTimeout(()=>{
+    pEl.classList.add('show'); dEl.classList.add('show');
+    const p = Math.floor(Math.random()*11)+12;
+    const d = Math.floor(Math.random()*11)+12;
+    let reward = 0; if((p<=21 && p>d) || d>21) reward = 20;
+    state.balance += reward; saveState(); renderProfile();
+    pEl.textContent = 'Игрок: ' + p; dEl.textContent = 'Дилер: ' + d;
+    resEl.textContent = reward? ('Вы выиграли +' + reward + '₽') : 'Ничья / Проигрыш';
+    pushEvent(`Блэкджек: игрок ${p} дилер ${d} ${reward?('+'+reward+'₽'):''}`);
+  }, 240);
+});
+
+/* Wheel of fortune - canvas wheel with sectors, pointer and full prizes (including two no-win) */
+const wheelCanvas = document.getElementById('wheelCanvas');
+const wctx = wheelCanvas.getContext('2d');
+const W = wheelCanvas.width;
+const C = W/2;
+const wheelPrizes = ['100₽','+20%','Ещё раз','50₽','Слот','Без выигрыша','Без выигрыша'];
+const wheelColors = ['#f7b267','#90be6d','#f94144','#577590','#f3722c','#6b6b6b','#6b6b6b'];
+let wheelRotation = 0;
+let wheelSpinning = false;
+
+function drawWheel(){
+  const arc = 2*Math.PI / wheelPrizes.length;
+  wctx.clearRect(0,0,W,W);
+  wctx.save(); wctx.translate(C,C); wctx.rotate(wheelRotation);
+  for(let i=0;i<wheelPrizes.length;i++){
+    wctx.beginPath();
+    wctx.fillStyle = wheelColors[i%wheelColors.length];
+    wctx.moveTo(0,0);
+    wctx.arc(0,0,C, i*arc, (i+1)*arc);
+    wctx.closePath(); wctx.fill();
+    // labels
+    wctx.save();
+    wctx.fillStyle = '#012';
+    wctx.rotate(i*arc + arc/2);
+    wctx.translate(C*0.58,0);
+    wctx.rotate(Math.PI/2);
+    wctx.font = 'bold 16px sans-serif';
+    const text = wheelPrizes[i];
+    wctx.fillText(text, -wctx.measureText(text).width/2, 0);
+    wctx.restore();
+  }
+  wctx.restore();
+}
+drawWheel();
+
+function easeOutCubic(t){ return (--t)*t*t + 1; }
+
+function spinWheel(){
+  if(wheelSpinning) return;
+  wheelSpinning = true;
+  const sectorArc = 2*Math.PI / wheelPrizes.length;
+  const targetIndex = Math.floor(Math.random()*wheelPrizes.length);
+  // target angle such that selected sector aligns with pointer at -90deg
+  const targetAngle = -Math.PI/2 - (targetIndex*sectorArc + sectorArc/2);
+  const extra = (Math.PI*2) * (3 + Math.floor(Math.random()*3)); // extra rotations
+  const start = wheelRotation;
+  const final = start + extra + ((targetAngle - (start % (Math.PI*2)) + Math.PI*2) % (Math.PI*2));
+  const duration = 4200;
+  const t0 = performance.now();
+  function frame(now){
+    const t = Math.min(1, (now - t0)/duration);
+    const eased = easeOutCubic(t);
+    wheelRotation = start + (final - start) * eased;
+    drawWheel();
+    if(t < 1) requestAnimationFrame(frame);
+    else {
+      wheelSpinning = false;
+      const landed = Math.floor((((-wheelRotation + Math.PI/2) % (Math.PI*2) + (Math.PI*2)) % (Math.PI*2)) / sectorArc);
+      const prize = wheelPrizes[landed];
+      applyWheelPrize(prize);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function applyWheelPrize(prize){
+  let msg = '';
+  if(prize === '100₽'){ state.balance += 100; msg = 'Вы выиграли 100₽'; }
+  else if(prize === '+20%'){ const add = Math.floor(state.balance * 0.2); state.balance += add; msg = `Баланс +20% (${add}₽)`; }
+  else if(prize === 'Ещё раз'){ msg = 'Ещё раз! Запускаем новый спин...'; setTimeout(spinWheel, 700); }
+  else if(prize === '50₽'){ state.balance += 50; msg = 'Вы выиграли 50₽'; }
+  else if(prize === 'Слот'){ msg = 'Бесплатный слот! Выполняем спин...'; state.freeSlot = true; saveState(); setTimeout(()=>{ document.getElementById('spinSlots').click(); }, 700); }
+  else { msg = 'Без выигрыша'; }
+  saveState(); renderProfile();
+  document.getElementById('wheelRes').textContent = msg;
+  pushEvent(`Колесо: ${prize} (${msg})`);
+}
+
+document.getElementById('spinWheel').addEventListener('click', ()=>{ spinWheel(); });
+
+/* initial drawing loops */
+(function loop(){
+  drawWheel();
+  drawRoulette();
+  requestAnimationFrame(loop);
+})();
+
+/* restore saved state display */
+renderProfile();
+
+</script>
+</body>
+</html>
