@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Snake Cash — Online Leaderboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#02110a; color:#e6fff0; }
+    .app { max-width: 900px; margin: auto; padding: 16px; }
+    .tabs { display:flex; gap:10px; margin-bottom:12px; }
+    .tab { padding:8px 14px; border:1px solid #0f0; background:#033; cursor:pointer; border-radius:6px; color:#0f0; }
+    .tab.active { background:#0f0; color:#033; font-weight:bold; }
+    section.panel { display:none; }
+    section.panel.active { display:block; }
+    .btn { padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
+    .leaderboard { max-height:260px; overflow:auto; }
+    .small-muted { font-size:12px; color:#aaa; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>Snake Cash</h1>
+  <div class="tabs">
+    <button class="tab active" data-tab="home">Главная</button>
+    <button class="tab" data-tab="records">Рекорды</button>
+  </div>
+  <section id="home" class="panel active">
+    <p>Добро пожаловать в Snake Cash! Здесь будет игра (упрощённый вариант).</p>
+    <p>Ваш баланс: <span id="balance">1000</span>$</p>
+    <button id="winBtn" class="btn">+100$</button>
+    <button id="loseBtn" class="btn">-100$</button>
+  </section>
+  <section id="records" class="panel">
+    <h3>Рекорды / Таблица лидеров</h3>
+    <button id="publishScore" class="btn">Опубликовать мой рекорд</button>
+    <div class="leaderboard" id="leaderboardBox"></div>
+    <div style="margin-top:8px" class="small-muted">Эта таблица лидеров синхронизируется онлайн через JSONBin.</div>
+  </section>
+</div>
+
+<script>
+// Состояние игрока
+const S = {
+  name: localStorage.getItem('sc_name') || 'Гость',
+  balance: parseInt(localStorage.getItem('sc_balance') || '1000', 10),
+  leaderboard: []
+};
+function save(){ localStorage.setItem('sc_balance', S.balance); }
+
+document.getElementById('balance').textContent = S.balance;
+document.getElementById('winBtn').onclick = ()=>{ S.balance+=100; save(); document.getElementById('balance').textContent=S.balance; };
+document.getElementById('loseBtn').onclick = ()=>{ S.balance-=100; save(); document.getElementById('balance').textContent=S.balance; };
+
+// Переключение вкладок (pointerdown)
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('pointerdown',(e)=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const id=t.dataset.tab;
+    document.querySelectorAll('section.panel').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  });
+});
+
+// JSONBin интеграция
+const BIN_ID = "BIN_ID_HERE"; // вставь свой Bin ID сюда
+const SECRET = "$2a$10$OYNGrGnvRyn.pc7y/hU8deWOlDQz0kvb6aEfQOTXXUVytu0hPGkKa";
+const BASE_URL = "https://api.jsonbin.io/v3/b/" + BIN_ID;
+
+async function loadLeaderboard(){
+  if(BIN_ID==="BIN_ID_HERE"){ 
+    document.getElementById('leaderboardBox').innerHTML='<div class="small-muted">Укажи BIN_ID в коде index.html</div>'; 
+    return; 
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/latest`, { headers: { "X-Master-Key": SECRET }});
+    const data = await res.json();
+    S.leaderboard = data.record || [];
+    renderLeaderboard();
+  } catch(e){ console.error("Ошибка загрузки:", e); }
+}
+
+async function saveLeaderboard(){
+  try {
+    await fetch(BASE_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Master-Key": SECRET },
+      body: JSON.stringify(S.leaderboard)
+    });
+  } catch(e){ console.error("Ошибка сохранения:", e); }
+}
+
+document.getElementById("publishScore").addEventListener("click", async ()=>{
+  const entry = { name: S.name, balance: S.balance, date: new Date().toLocaleString() };
+  const ex = S.leaderboard.find(x => x.name === S.name);
+  if(ex){ if(entry.balance > ex.balance){ ex.balance = entry.balance; ex.date = entry.date; } }
+  else { S.leaderboard.push(entry); }
+  await saveLeaderboard();
+  renderLeaderboard();
+  alert("Рекорд опубликован!");
+});
+
+function renderLeaderboard(){
+  const box = document.getElementById('leaderboardBox');
+  const lb = S.leaderboard.slice().sort((a,b)=>b.balance-a.balance).slice(0,20);
+  if(!lb.length){ box.innerHTML = '<div class="small-muted">Пока нет опубликованных рекордов</div>'; return; }
+  box.innerHTML = '<ol>' + lb.map(i=>`<li>${i.name} — $${i.balance} <span class="small-muted">(${i.date})</span></li>`).join('') + '</ol>';
+}
+
+// Автозагрузка
+loadLeaderboard();
+setInterval(loadLeaderboard,10000);
+</script>
+</body></html>
