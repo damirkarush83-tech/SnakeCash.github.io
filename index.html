@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Snake Cash — Mobile Final</title>
+<style>
+/* Mobile-first, prevent horizontal scroll */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow-x:hidden;background:#06140d;color:#e8fff2;font-family:Inter,Segoe UI,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.container{max-width:980px;margin:0 auto;padding:12px;width:100%}
+.header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px}
+.logo h1{margin:0;color:#00ff7a;font-size:20px}
+.user{display:flex;align-items:center;gap:8px;color:#ffd166;cursor:pointer}
+.avatar{width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid #00ff7a;background:#022;display:flex;align-items:center;justify-content:center}
+.balance{font-weight:700;color:#ffd166;font-size:15px}
+.controls{display:flex;gap:8px;align-items:center}
+.btn{padding:8px 12px;border-radius:10px;border:1px solid rgba(0,255,122,0.08);background:transparent;color:#00ff7a;cursor:pointer;font-weight:600}
+.btn.primary{background:#00ff7a;color:#042;box-shadow:0 6px 18px rgba(0,255,122,0.08)}
+.tabs{display:flex;gap:8px;overflow:auto;padding-bottom:8px;margin-bottom:12px}
+.tab{flex:0 0 auto;padding:8px 12px;border-radius:10px;border:1px solid rgba(0,255,122,0.06);color:#00ff7a;background:transparent;cursor:pointer;white-space:nowrap}
+.tab.active{background:#00ff7a;color:#042;font-weight:700}
+
+/* Panels single column */
+.panel{display:none;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));padding:12px;border-radius:10px;border:1px solid rgba(0,255,122,0.04);margin-bottom:12px;overflow:hidden}
+.panel.active{display:block}
+.card{background:#0c1c14;padding:12px;border-radius:10px;border:1px solid rgba(0,255,122,0.04);margin-bottom:12px}
+.input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:#022;color:#e8fff2;margin:8px 0}
+
+/* Games grid responsive */
+.games-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.game-card{position:relative;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.03));overflow:hidden;border:1px solid rgba(0,255,122,0.03)}
+.game-left{font-size:46px;display:flex;align-items:center;justify-content:center;height:80px}
+.game-title{position:absolute;right:10px;top:8px;color:#ffd166;font-weight:700}
+.play-btn{position:absolute;right:8px;bottom:8px;padding:8px 10px;border-radius:8px;border:none;background:#00ff7a;color:#042;cursor:pointer}
+
+/* fake lists */
+.fake-list{max-height:160px;overflow:auto;padding:6px;border-radius:8px;background:rgba(0,0,0,0.04);margin-top:6px;word-break:break-word}
+
+/* modals */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:12px}
+.modal{background:#0c1c14;padding:14px;border-radius:12px;max-width:560px;width:100%;max-height:90vh;overflow:auto;position:relative;border:1px solid rgba(0,255,122,0.06)}
+.modal-close{position:absolute;right:10px;top:8px;background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer}
+
+/* coin, reels, crash visuals */
+.coin{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:34px;border:6px solid #ffd166;background:conic-gradient(#ffd166 0 50%, transparent 0)}
+.spin3d{animation:spin3d 1.2s cubic-bezier(.2,.8,.2,.9)}
+@keyframes spin3d{from{transform:rotateY(0)}to{transform:rotateY(1440deg)}}
+.slot-reel{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.reel{width:56px;height:56px;border-radius:8px;background:#012a1f;display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid rgba(255,255,255,0.04)}
+.reel.spin{animation:reelSpin 1s linear}
+@keyframes reelSpin{0%{transform:translateY(-40px)}50%{transform:translateY(20px)}100%{transform:translateY(0)}}
+
+/* crash */
+.crash-stage{width:100%;height:220px;background:linear-gradient(180deg,#03130f,#01281e);border-radius:10px;position:relative;overflow:hidden;border:1px solid rgba(0,255,122,0.03);display:flex;align-items:flex-end;justify-content:center}
+.snake{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:50px;height:50px;background:linear-gradient(90deg,#00ff7a,#00cc62);border-radius:25px;box-shadow:0 8px 18px rgba(0,0,0,0.6)}
+
+/* confetti */
+#confettiCanvas{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2000}
+
+/* responsive desktop (wider screens) */
+@media(min-width:900px){
+  .games-grid{grid-template-columns:repeat(2,1fr)}
+  .game-left{font-size:56px;height:120px}
+  .header{margin-bottom:16px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">
+      <h1>Snake Cash</h1>
+      <div class="user" id="profileShortcut" title="Профиль">
+        <div class="avatar" id="headerAvatar">👤</div>
+        <div id="headerNick">Гость</div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="balance">Баланс: <span id="balance">1000</span> ₽</div>
+      <button id="btnDeposit" class="btn primary">Пополнить</button>
+      <button id="btnWithdraw" class="btn">Вывести</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="home">Главная</button>
+    <button class="tab" data-tab="profile">Профиль</button>
+    <button class="tab" data-tab="games">Игры</button>
+    <button class="tab" data-tab="achievements">Достижения</button>
+    <button class="tab" data-tab="records">Рекорды</button>
+  </div>
+
+  <section id="home" class="panel active">
+    <div class="card">
+      <h2>Добро пожаловать в Snake Cash</h2>
+      <p>💸 Атмосфера азарта и стиля. Слоган: <b>«Твоя удача — в наших руках!»</b></p>
+      <p>Основано: <b>25.09.2025</b></p>
+    </div>
+
+    <div class="card">
+      <h3>Преимущества</h3>
+      <ul>
+        <li>⚡ Быстрые результаты</li>
+        <li>🎯 Честная механика</li>
+        <li>🏆 Лидерборд</li>
+        <li>💎 Бонусы</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>FAQ</h3>
+      <div>
+        <div class="faq-q">Как пополнить?</div>
+        <div class="faq-a">Через кнопку «Пополнить» — минимум 200₽. Прикрепите скрин чека и нажмите «Оплатил». Время на перевод — 10 минут.</div>
+      </div>
+      <div>
+        <div class="faq-q">Промокод?</div>
+        <div class="faq-a"><b>SNAKE20</b> — +20% к депозиту.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Советы новичкам</h3>
+      <ul>
+        <li>Начинайте с малого</li>
+        <li>Не рискуйте больше, чем можете позволить</li>
+        <li>Используйте промо</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="profile" class="panel">
+    <div class="card">
+      <h2>Профиль</h2>
+      <img id="avatarPreview" src="" style="display:none;width:96px;height:96px;border-radius:50%;margin-bottom:8px">
+      <input id="avatarInput" type="file" accept="image/*" class="input">
+      <input id="nicknameInput" placeholder="Никнейм" class="input">
+      <input id="emailInput" placeholder="Email" class="input">
+      <input id="promoInput" placeholder="Промокод" class="input">
+      <button id="saveProfile" class="btn primary">Сохранить</button>
+    </div>
+  </section>
+
+  <section id="games" class="panel">
+    <div class="card">
+      <h2>Игры</h2>
+      <div class="games-grid" id="gamesGrid"></div>
+    </div>
+  </section>
+
+  <section id="achievements" class="panel">
+    <div class="card">
+      <h2>Достижения</h2>
+      <ul id="achList"><li>Первое пополнение</li></ul>
+    </div>
+  </section>
+
+  <section id="records" class="panel">
+    <div class="card">
+      <h2>Рекорды</h2>
+      <div id="leaderboard"></div>
+    </div>
+  </section>
+
+  <div class="card">
+    <h3>События</h3>
+    <div id="events" class="fake-list"></div>
+  </div>
+</div>
+
+<canvas id="confettiCanvas"></canvas>
+<div id="modalRoot"></div>
+
+<script>
+/* Mobile-first app state */
+const APP = {
+  balance: parseInt(localStorage.getItem('sc_balance')||'1000',10),
+  nickname: localStorage.getItem('sc_nickname')||'Гость',
+  email: localStorage.getItem('sc_email')||'',
+  promo: localStorage.getItem('sc_promo')||'',
+  avatar: localStorage.getItem('sc_avatar')||'',
+  events: JSON.parse(localStorage.getItem('sc_events')||'[]'),
+  rouletteLast: parseInt(localStorage.getItem('sc_roulette_ts')||'0',10)
+};
+function save(){ localStorage.setItem('sc_balance',APP.balance); localStorage.setItem('sc_nickname',APP.nickname); localStorage.setItem('sc_email',APP.email); localStorage.setItem('sc_promo',APP.promo); localStorage.setItem('sc_avatar',APP.avatar); localStorage.setItem('sc_events',JSON.stringify(APP.events)); localStorage.setItem('sc_roulette_ts',APP.rouletteLast); }
+function addEvent(t){ APP.events.unshift(t); if(APP.events.length>80) APP.events.pop(); save(); renderEvents(); }
+function renderEvents(){ const el=document.getElementById('events'); if(!el) return; el.innerHTML = APP.events.slice(0,50).map(x=>`<div style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.02)">${x}</div>`).join(''); }
+function timeNow(){ return new Date().toLocaleTimeString(); }
+if(APP.events.length===0) addEvent(`${timeNow()} — Добро пожаловать в Snake Cash (мобильная версия)`);
+
+/* header */
+function renderHeader(){ document.getElementById('balance').textContent = APP.balance; document.getElementById('headerNick').textContent = APP.nickname; const ha=document.getElementById('headerAvatar'); if(APP.avatar){ ha.innerHTML = `<img src="${APP.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`; document.getElementById('avatarPreview').src=APP.avatar; document.getElementById('avatarPreview').style.display='block'; } else { ha.textContent='👤'; } }
+renderHeader(); renderEvents();
+
+/* tabs */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.getElementById(t.dataset.tab).classList.add('active'); }));
+document.getElementById('profileShortcut').addEventListener('click', ()=>{ document.querySelector('[data-tab="profile"]').click(); window.scrollTo({top:0,behavior:'smooth'}); });
+
+/* profile save */
+document.getElementById('saveProfile').addEventListener('click', ()=>{ APP.nickname=document.getElementById('nicknameInput').value.trim()||'Гость'; APP.email=document.getElementById('emailInput').value.trim(); APP.promo=document.getElementById('promoInput').value.trim(); save(); renderHeader(); showCongrats('Профиль сохранён'); });
+document.getElementById('avatarInput').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>{ APP.avatar=ev.target.result; save(); renderHeader(); }; r.readAsDataURL(f); });
+
+/* modal helpers */
+function openModalInner(innerHtml){ document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay"><div class="modal"><button class="modal-close" id="modalCloseBtn">&times;</button>${innerHtml}</div></div>`; document.getElementById('modalCloseBtn').onclick = ()=>closeModal(); }
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+function showCongrats(msg){ openModalInner(`<h3>🎉 Поздравляем!</h3><p>${msg}</p><div style="text-align:right"><button class="btn primary" id="okCongrats">Ок</button></div>`); document.getElementById('okCongrats').onclick = ()=> closeModal(); confettiBurst(); }
+
+/* deposit */
+document.getElementById('btnDeposit').addEventListener('click', ()=>{
+  openModalInner(`<h3>Пополнение (мин.200₽)</h3><input id="depEmail" placeholder="Email" value="${APP.email}" class="input"><input id="depAmount" type="number" placeholder="Сумма" min="200" class="input"><input id="depPromo" placeholder="Промокод" class="input"><div id="depStep2" style="display:none;margin-top:8px"><p>Реквизиты: <b>2204 3203 7071 4547</b> (Озон Банк, Дамир К.)</p><p>Время: <span id="depTimer">10:00</span></p><input id="depFile" type="file" accept="image/*" class="input"><div style="text-align:right"><button class="btn primary" id="depConfirm" disabled>Оплатил, я проверяю перевод</button></div></div><div style="text-align:right;margin-top:8px"><button class="btn primary" id="depStart">Далее</button></div>`);
+  document.getElementById('depStart').onclick = ()=>{
+    const email=document.getElementById('depEmail').value.trim(); const amount=parseInt(document.getElementById('depAmount').value,10);
+    if(!email||isNaN(amount)||amount<200){ alert('Email и сумма >=200₽'); return; }
+    document.getElementById('depStep2').style.display='block'; let rem=600; const timer=document.getElementById('depTimer'); timer.textContent = formatTime(rem);
+    const iv=setInterval(()=>{ rem--; timer.textContent = formatTime(rem); if(rem<=0){ clearInterval(iv); alert('Время истекло'); } },1000);
+    document.getElementById('depFile').addEventListener('change',(e)=>{ document.getElementById('depConfirm').disabled = !e.target.files.length; });
+    document.getElementById('depConfirm').onclick = ()=>{ const promo=document.getElementById('depPromo').value.trim(); let final=amount; if(promo.toUpperCase()==='SNAKE20') final=Math.round(final*1.2); APP.balance+=final; addEvent(`${timeNow()} — Пополнение +${final}₽`); save(); renderHeader(); closeModal(); showCongrats(`Баланс +${final}₽`); clearInterval(iv); };
+  };
+});
+
+/* withdraw */
+document.getElementById('btnWithdraw').addEventListener('click', ()=>{
+  openModalInner(`<h3>Вывод (мин.500₽)</h3><input id="wEmail" placeholder="Email" value="${APP.email}" class="input"><input id="wCard" placeholder="Номер карты" class="input"><input id="wName" placeholder="ФИО" class="input"><input id="wBank" placeholder="Банк" class="input"><input id="wAmount" type="number" placeholder="Сумма" min="500" class="input"><div style="text-align:right"><button class="btn primary" id="wConfirm">Запросить вывод</button></div>`);
+  document.getElementById('wConfirm').onclick = ()=>{ const amt=parseInt(document.getElementById('wAmount').value,10); if(isNaN(amt)||amt<500){ alert('Мин 500₽'); return; } if(amt>APP.balance){ alert('Недостаточно'); return; } APP.balance-=amt; addEvent(`${timeNow()} — Вывод -${amt}₽`); save(); renderHeader(); closeModal(); showCongrats(`Вывод ${amt}₽ одобрен`); };
+});
+
+function formatTime(s){ const m=Math.floor(s/60); const sec=s%60; return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; }
+
+/* Games */
+const GAMES = [
+  {id:'blackjack', title:'Блэкджек', icon:'🃏'},
+  {id:'coin', title:'Орел и решка', icon:'🪙'},
+  {id:'slots', title:'Слот-машина', icon:'🎰'},
+  {id:'roulette', title:'Рулетка', icon:'🎡'},
+  {id:'crash', title:'Crash (Змейка)', icon:'🐍'}
+];
+const gamesGrid = document.getElementById('gamesGrid');
+GAMES.forEach(g=>{
+  const el=document.createElement('div'); el.className='game-card';
+  el.innerHTML = `<div class="game-left">${g.icon}</div><div style="padding:8px"><div style="font-weight:700">${g.title}</div><input class="input stake" id="card_stake_${g.id}" placeholder="Ставка (₽)"></div><div class="game-title">${g.title}</div><button class="play-btn" data-game="${g.id}">Играть</button><div style="margin-top:8px"><div class="fake-list" id="card_fake_${g.id}"></div></div>`;
+  gamesGrid.appendChild(el);
+});
+
+/* create game panels */
+GAMES.forEach(g=>{
+  const panel=document.createElement('section'); panel.id='game_'+g.id; panel.className='panel';
+  panel.innerHTML = `<h2 style="margin-top:0">${g.title}</h2><div class="card" id="card_${g.id}"><div id="visual_${g.id}" style="display:flex;align-items:center;justify-content:center;margin-bottom:8px"><div style="font-size:72px">${g.icon}</div></div><label>Сумма ставки (₽)<input id="stake_${g.id}" class="input" placeholder="Введите сумму"></label><div style="margin-top:8px"><button id="btnPlay_${g.id}" class="btn primary">Играть</button></div><div id="res_${g.id}" style="margin-top:8px;color:#9fb4a6"></div><div style="margin-top:10px"><h4>Лента победителей</h4><div id="fake_${g.id}" class="fake-list"></div></div><div style="margin-top:8px"><h4>История</h4><div id="history_${g.id}" class="fake-list"></div></div></div>`;
+  document.querySelector('.container').appendChild(panel);
+});
+
+function openGame(id){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('game_'+id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  startFake(id);
+  const cardVal = document.getElementById('card_stake_'+id);
+  if(cardVal) document.getElementById('stake_'+id).value = cardVal.value;
+}
+
+/* fake winners */
+let fakeInts = {};
+function genFake(id){ const names=['Иван П.','Олег С.','Катя М.','Alex99','PlayerX','Наташа','Денис','Вика','Maks','Алексей']; const name=names[Math.floor(Math.random()*names.length)]; const amount=(Math.floor(Math.random()*50)+1)*100; const text=`${timeNow()} — ${name} выиграл ${amount}₽`; const box=document.getElementById('fake_'+id); if(box){ const d=document.createElement('div'); d.style.padding='6px'; d.textContent=text; box.prepend(d); while(box.children.length>30) box.removeChild(box.lastChild); } const cardBox=document.getElementById('card_fake_'+id); if(cardBox){ const d2=document.createElement('div'); d2.style.padding='6px'; d2.textContent=text; cardBox.prepend(d2); while(cardBox.children.length>15) cardBox.removeChild(cardBox.lastChild); } }
+function startFake(id){ Object.keys(fakeInts).forEach(k=>{ clearInterval(fakeInts[k]); delete fakeInts[k]; }); genFake(id); fakeInts[id]=setInterval(()=>genFake(id), 5000 + Math.floor(Math.random()*5000)); }
+
+function appendHistory(id,text){ const h=document.getElementById('history_'+id); const d=document.createElement('div'); d.style.padding='6px'; d.textContent = `${timeNow()} — ${text}`; h.prepend(d); while(h.children.length>50) h.removeChild(h.lastChild); addEvent(`${timeNow()} — ${text}`); save(); }
+
+/* Play visuals */
+function playVisualAndResolve(id, stake){
+  return new Promise(resolve=>{
+    const visual=document.getElementById('visual_'+id); visual.innerHTML='';
+    const win=Math.random()<0.3;
+    if(id==='coin'){
+      const c=document.createElement('div'); c.className='coin spin3d'; c.textContent='₽'; visual.appendChild(c); setTimeout(()=>resolve(win),1200);
+    } else if(id==='slots'){
+      const wrap=document.createElement('div'); wrap.className='slot-reel'; for(let i=0;i<3;i++){ const r=document.createElement('div'); r.className='reel spin'; r.textContent=['🍒','🔔','7️⃣','🍋','💎'][Math.floor(Math.random()*5)]; wrap.appendChild(r); } visual.appendChild(wrap);
+      setTimeout(()=>{ const reels=Array.from(wrap.children); reels.forEach((r,i)=>{ setTimeout(()=>{ r.classList.remove('spin'); r.textContent = win ? '7️⃣' : ['🍒','🔔','🍋'][Math.floor(Math.random()*3)]; }, i*250); }); },500);
+      setTimeout(()=>resolve(win),1400);
+    } else if(id==='roulette'){
+      const wheel=document.createElement('div'); wheel.className='roulette-wheel roulette-spin'; wheel.style.width='150px'; wheel.style.height='150px'; visual.appendChild(wheel); setTimeout(()=>resolve(win),1800);
+    } else if(id==='crash'){
+      resolve('crash');
+    } else resolve(win);
+  });
+}
+
+/* Attach play handlers */
+GAMES.forEach(g=>{
+  document.getElementById('btnPlay_'+g.id).addEventListener('click', async ()=>{
+    if(g.id==='blackjack'){ openBlackjack(); return; }
+    if(g.id==='crash'){ openCrash(); return; }
+    if(g.id==='roulette'){ const now=Date.now(); if(now-APP.rouletteLast < 24*3600000){ alert('Рулетка доступна раз в 24 часа'); return; } }
+    const stake = g.id==='roulette' ? 0 : Math.max(0,Math.floor(Number(document.getElementById('stake_'+g.id).value||0)));
+    if(g.id!=='roulette' && (!stake || stake<=0)){ alert('Введите ставку'); return; }
+    if(g.id!=='roulette' && stake>APP.balance){ alert('Недостаточно средств'); return; }
+    const res = await playVisualAndResolve(g.id, stake);
+    if(g.id==='crash'){ return; }
+    if(g.id==='roulette'){
+      APP.rouletteLast = Date.now(); save();
+      if(res){ const amt = 500 + Math.floor(Math.random()*4500); APP.balance+=amt; appendHistory(g.id, `Рулетка +${amt}₽`); renderHeader(); showCongrats(`Вы выиграли ${amt}₽`); } else { appendHistory(g.id, 'Рулетка: без выигрыша'); showCongrats('Без выигрыша'); }
+      return;
+    }
+    if(res){ const gain=stake*2; APP.balance+=gain; appendHistory(g.id, `Выигрыш +${gain}₽`); save(); renderHeader(); showCongrats(`Вы выиграли ${gain}₽!`); } else { APP.balance-=stake; appendHistory(g.id, `Проигрыш -${stake}₽`); save(); renderHeader(); showCongrats(`Проиграли ${stake}₽`); }
+  });
+});
+
+/* Blackjack */
+function createDeck(){ const suits=['♠','♥','♦','♣']; const vals=['A','2','3','4','5','6','7','8','9','10','J','Q','K']; const deck=[]; for(const s of suits) for(const v of vals) deck.push({s,v}); return deck; }
+function cardValue(c){ if(c.v==='A') return 11; if(['J','Q','K'].includes(c.v)) return 10; return parseInt(c.v,10); }
+function handValue(hand){ let sum=0, aces=0; hand.forEach(c=>{ const v=cardValue(c); sum+=v; if(c.v==='A') aces++; }); while(sum>21 && aces>0){ sum-=10; aces--; } return sum; }
+
+function openBlackjack(){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.getElementById('game_blackjack').classList.add('active'); window.scrollTo({top:0,behavior:'smooth'});
+  const visual=document.getElementById('visual_blackjack'); visual.innerHTML='';
+  const stakeInput=document.getElementById('stake_blackjack'); stakeInput.value = stakeInput.value || document.getElementById('card_stake_blackjack')?.value || '';
+  const board=document.getElementById('card_blackjack');
+  let controls = board.querySelector('.controls'); if(controls) controls.remove();
+  controls=document.createElement('div'); controls.className='controls';
+  const start=document.createElement('button'); start.className='btn primary'; start.textContent='Начать';
+  const hit=document.createElement('button'); hit.className='btn'; hit.textContent='Взять'; hit.disabled=true;
+  const stand=document.createElement('button'); stand.className='btn'; stand.textContent='Стоп'; stand.disabled=true;
+  controls.appendChild(start); controls.appendChild(hit); controls.appendChild(stand); board.appendChild(controls);
+  let deck=[], player=[], dealer=[], currentStake=0;
+  function render(){ visual.innerHTML=''; const pBox=document.createElement('div'); pBox.style.display='flex'; pBox.style.flexDirection='column'; pBox.style.alignItems='center'; const pTitle=document.createElement('div'); pTitle.textContent='Игрок'; pTitle.style.fontWeight='700'; pBox.appendChild(pTitle); const pDeck=document.createElement('div'); pDeck.className='card-deck'; player.forEach(c=>{ const e=document.createElement('div'); e.className='card'; e.textContent=c.v+c.s; pDeck.appendChild(e); }); pBox.appendChild(pDeck); const pVal=document.createElement('div'); pVal.textContent='Сумма: '+handValue(player); pBox.appendChild(pVal); visual.appendChild(pBox);
+  const dBox=document.createElement('div'); dBox.style.display='flex'; dBox.style.flexDirection='column'; dBox.style.alignItems='center'; const dTitle=document.createElement('div'); dTitle.textContent='Дилер'; dTitle.style.fontWeight='700'; dBox.appendChild(dTitle); const dDeck=document.createElement('div'); dDeck.className='card-deck'; dealer.forEach((c,i)=>{ const e=document.createElement('div'); e.className='card'; e.textContent=c.v+c.s; dDeck.appendChild(e); }); dBox.appendChild(dDeck); const dVal=document.createElement('div'); dVal.textContent='Сумма: '+handValue(dealer); dBox.appendChild(dVal); visual.appendChild(dBox); }
+  function deal(to){ to.push(deck.pop()); render(); }
+  start.onclick = ()=>{
+    const stake = Math.max(0,Math.floor(Number(stakeInput.value||0))); if(!stake||stake<=0){ alert('Введите ставку'); return; } if(stake>APP.balance){ alert('Недостаточно средств'); return; }
+    currentStake=stake;
+    deck=createDeck(); for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
+    player=[]; dealer=[]; deal(player); deal(dealer); deal(player); deal(dealer); hit.disabled=false; stand.disabled=false; start.disabled=true; render();
+    if(handValue(player)===21){ const gain=currentStake*2; APP.balance+=gain; appendHistory('blackjack', `Выигрыш +${gain}₽`); save(); renderHeader(); showCongrats(`Blackjack! Вы выиграли ${gain}₽`); hit.disabled=true; stand.disabled=true; start.disabled=false; }
+  };
+  hit.onclick = ()=>{ deal(player); if(handValue(player)>21){ APP.balance -= currentStake; appendHistory('blackjack', `Проигрыш -${currentStake}₽`); save(); renderHeader(); showCongrats(`Перебор! Проигрыш ${currentStake}₽`); hit.disabled=true; stand.disabled=true; start.disabled=false; } };
+  stand.onclick = ()=>{ hit.disabled=true; stand.disabled=true; (function dealerPlay(){ if(handValue(dealer)<17){ setTimeout(()=>{ deal(dealer); dealerPlay(); },600); } else { const pv=handValue(player), dv=handValue(dealer); if((pv>dv || dv>21) && pv<=21){ const gain=currentStake*2; APP.balance+=gain; appendHistory('blackjack', `Выигрыш +${gain}₽`); save(); renderHeader(); showCongrats(`Вы выиграли ${gain}₽`); } else { APP.balance -= currentStake; appendHistory('blackjack', `Проигрыш -${currentStake}₽`); save(); renderHeader(); showCongrats(`Вы проиграли ${currentStake}₽`); } start.disabled=false; } })(); };
+}
+
+/* Crash */
+let crashState = { running:false, multiplier:1.0, crashAt:0, interval:null };
+function openCrash(){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.getElementById('game_crash').classList.add('active'); window.scrollTo({top:0,behavior:'smooth'});
+  startFake('crash');
+  const visual=document.getElementById('visual_crash'); visual.innerHTML='';
+  const stage=document.createElement('div'); stage.className='crash-stage';
+  stage.innerHTML = `<div class="multiplier" id="crashMul">x1.00</div><div id="snake" class="snake"></div>`;
+  visual.appendChild(stage);
+  const startBtn=document.getElementById('btnPlay_crash'); const stakeInput=document.getElementById('stake_crash'); const resEl=document.getElementById('res_crash');
+  startBtn.textContent='Запустить'; startBtn.onclick = ()=>{
+    if(crashState.running) return;
+    const stake=Math.max(0,Math.floor(Number(stakeInput.value||0))); if(!stake||stake<=0){ alert('Введите ставку'); return; } if(stake>APP.balance){ alert('Недостаточно средств'); return; }
+    crashState.running=true; crashState.multiplier=1.0; resEl.textContent='';
+    const crashTime = 2000 + Math.floor(Math.random()*12000); crashState.crashAt = Date.now() + crashTime;
+    startBtn.textContent='Забрать'; startBtn.onclick = ()=>{ if(!crashState.running) return; cashoutCrash(stake); };
+    const snakeEl = document.getElementById('snake');
+    let last=Date.now();
+    crashState.interval = setInterval(()=>{
+      const now=Date.now(); const elapsed = now - last; last = now;
+      crashState.multiplier *= 1 + 0.0009 * (1 + Math.random()*0.5);
+      if(crashState.multiplier>500) crashState.multiplier=500;
+      document.getElementById('crashMul').textContent = 'x' + crashState.multiplier.toFixed(2);
+      const h = Math.min(0.9, Math.log10(crashState.multiplier+1)/2 + 0.05);
+      snakeEl.style.bottom = (h*100) + '%';
+      if(now>=crashState.crashAt){
+        clearInterval(crashState.interval); crashState.running=false;
+        snakeEl.style.background='linear-gradient(90deg,#ff6b6b,#ff9b6b)';
+        resEl.textContent='Краш! Ставка проиграна.';
+        APP.balance -= stake; appendHistory('crash', `Краш -${stake}₽`); save(); renderHeader(); showCongrats('Краш! Ставка сгорела.');
+        startBtn.textContent='Запустить'; startBtn.onclick = ()=>openCrash();
+      }
+    }, 80);
+  };
+}
+function cashoutCrash(stake){
+  if(!crashState.running) return;
+  const mul = crashState.multiplier; const gain = Math.round(stake * mul);
+  clearInterval(crashState.interval); crashState.running=false;
+  appendHistory('crash', `Кеш-аут +${gain}₽ (x${mul.toFixed(2)})`); APP.balance += gain; save(); renderHeader(); showCongrats(`Вы забрали ${gain}₽ (x${mul.toFixed(2)})`);
+  document.getElementById('btnPlay_crash').textContent='Запустить'; document.getElementById('btnPlay_crash').onclick = ()=>openCrash();
+}
+
+/* confetti */
+const confCanvas = document.getElementById('confettiCanvas'); const ctx = confCanvas.getContext('2d');
+function resizeCanvas(){ confCanvas.width = window.innerWidth; confCanvas.height = window.innerHeight; }
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
+function confettiBurst(){ const pieces=80; const arr=[]; for(let i=0;i<pieces;i++){ arr.push({x:window.innerWidth/2,y:window.innerHeight/2,vx:(Math.random()-0.5)*8,vy:(Math.random()-3)*8,size:4+Math.random()*6,color:`hsl(${Math.random()*360} 100% 60%)`,life:Math.random()*80+60}); } const iv=setInterval(()=>{ ctx.clearRect(0,0,confCanvas.width,confCanvas.height); for(const p of arr){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.3; p.life--; ctx.fillStyle=p.color; ctx.fillRect(p.x,p.y,p.size,p.size); } if(arr.every(a=>a.life<=0)) { clearInterval(iv); ctx.clearRect(0,0,confCanvas.width,confCanvas.height); } },16); }
+
+/* init */
+renderEvents(); renderHeader();
+
+/* attach dynamic openGame handlers on card buttons */
+document.querySelectorAll('.play-btn').forEach(b=>b.addEventListener('click', e=> openGame(e.currentTarget.dataset.game)));
+
+/* attach panel game play buttons after panels created */
+setTimeout(()=>{ GAMES.forEach(g=>{ document.getElementById('btnPlay_'+g.id).onclick = ()=> document.querySelector(`.play-btn[data-game="${g.id}"]`).click(); }); },300);
+</script>
+</body>
+</html>
